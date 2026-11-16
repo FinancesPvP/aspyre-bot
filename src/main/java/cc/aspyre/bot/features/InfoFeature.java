@@ -10,7 +10,9 @@ import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateBoostTimeEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -30,7 +32,13 @@ public class InfoFeature extends ListenerAdapter implements Feature {
 
     @Override
     public List<CommandData> commands() {
-        return List.of();
+        return List.of(Commands.slash("welcome-preview", "Staff: see the welcome message (only you can see it)"));
+    }
+
+    @Override
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        if (!event.getName().equals("welcome-preview") || !bot.requireStaff(event)) return;
+        event.reply(Messages.welcome(bot, event.getMember())).setEphemeral(true).queue();
     }
 
     @Override
