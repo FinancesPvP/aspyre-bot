@@ -28,9 +28,9 @@ public class Config {
     public String embedColor = "#F0601E";
     public String twitterLink = "";
     /** Name of the server's custom emoji used at the end of the welcome message. */
-    public String welcomeEmoji = "aspyre";
+    public String welcomeEmoji = "parapvp";
     /** Rotating "Playing ..." status. {members} becomes the member count. */
-    public java.util.List<String> presences = new java.util.ArrayList<>(java.util.List.of("aspyre.cc", "store.aspyre.cc", "with {members} members"));
+    public java.util.List<String> presences = new java.util.ArrayList<>(java.util.List.of("parapvp.com", "with {members} members"));
     /** Name -> role ID for the alert/notification roles select menu (/roles-panel). */
     public Map<String, Long> notificationRoles = new java.util.LinkedHashMap<>();
 

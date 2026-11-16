@@ -1,5 +1,8 @@
-version: 1.10
-- New /say command: staff can post a message as the bot in any channel, with an optional title
+version: 1.11
+- Rebranded the bot from Aspyre Network to ParaPvP
+- Every embed now says "Powered by ParaPvP" and panels use a new ParaPvP banner
+- Welcome message, rules, ticket messages and the info panel now say ParaPvP
+- Server IP and website now point to parapvp.com
 + Mod log channel: every ban, kick, timeout and purge logged
 + Message logs: deleted and edited messages go to a staff channel
 + /purge, /slowmode, /timeout and /kick

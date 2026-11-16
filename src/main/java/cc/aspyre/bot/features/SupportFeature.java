@@ -258,7 +258,7 @@ public class SupportFeature extends ListenerAdapter implements Feature {
             bot.jda.retrieveUserById(ownerId)
                     .flatMap(u -> u.openPrivateChannel())
                     .flatMap(dm -> dm.sendMessageEmbeds(Messages.embed(bot, "Ticket Closed",
-                                    "Your ticket **#" + channel.getName() + "** in Aspyre Network was closed.\n"
+                                    "Your ticket **#" + channel.getName() + "** in ParaPvP was closed.\n"
                                     + "A copy of the conversation is attached."))
                             .addFiles(FileUpload.fromData(data, filename)))
                     .queue(null, err -> {}); // DMs closed

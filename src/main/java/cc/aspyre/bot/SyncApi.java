@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
  * "Authorization: Bearer <sync_api.secret>".
  *
  * POST /sync         {"code":"123456","uuid":"...","ign":"Notch","rank":"VIP"}
- * POST /leaderboard  {"title":"Map 3","entries":[{"name":"Aspyre","points":1200}]}
+ * POST /leaderboard  {"title":"Map 3","entries":[{"name":"Raiders","points":1200}]}
  * GET  /health
  */
 public class SyncApi {

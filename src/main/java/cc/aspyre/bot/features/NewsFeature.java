@@ -85,7 +85,7 @@ public class NewsFeature extends ListenerAdapter implements Feature {
                 Commands.slash("leaderboard", "Faction leaderboard").addSubcommands(
                         new SubcommandData("show", "See the current leaderboard"),
                         new SubcommandData("set", "Staff: set the leaderboard by hand")
-                                .addOption(OptionType.STRING, "entries", "e.g. Aspyre:1200, Raiders:950", true)
+                                .addOption(OptionType.STRING, "entries", "e.g. Raiders:1200, Vipers:950", true)
                                 .addOption(OptionType.STRING, "title", "e.g. Map 3")),
                 Commands.slash("strike", "F-top strikes").addSubcommands(
                         new SubcommandData("add", "Staff: give a faction an f-top strike")
@@ -525,7 +525,7 @@ public class NewsFeature extends ListenerAdapter implements Feature {
             }
         }
         if (parsed.isEmpty()) {
-            event.reply("Use the format `Aspyre:1200, Raiders:950`.").setEphemeral(true).queue();
+            event.reply("Use the format `Raiders:1200, Vipers:950`.").setEphemeral(true).queue();
             return;
         }
         event.deferReply(true).queue();

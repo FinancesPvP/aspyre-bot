@@ -25,12 +25,12 @@ import java.util.function.Function;
  * Every message the bot posts, in one place so the wording is easy to change.
  *
  * Style (matches the Fyre/HCTeams bot): a title, the text in a quote block, a timestamp, and a
- * "Powered by Aspyre Network" footer with the bot's avatar. Panels also show the Aspyre banner.
+ * "Powered by ParaPvP" footer with the bot's avatar. Panels also show the ParaPvP banner.
  */
 public final class Messages {
     private Messages() {}
 
-    public static final String POWERED_BY = "Powered by Aspyre Network";
+    public static final String POWERED_BY = "Powered by ParaPvP";
     private static final String BANNER_FILE = "banner.png";
     private static byte[] bannerBytes;
 
@@ -52,7 +52,7 @@ public final class Messages {
         return base(bot, title, description).build();
     }
 
-    /** A panel embed: the standard embed plus the Aspyre banner along the bottom. */
+    /** A panel embed: the standard embed plus the ParaPvP banner along the bottom. */
     public static MessageEmbed panel(Bot bot, String title, String description) {
         return base(bot, title, description).setImage("attachment://" + BANNER_FILE).build();
     }
@@ -99,7 +99,7 @@ public final class Messages {
                 "Do not post inappropriate pictures, links or videos.",
                 "No NSFW posts.",
                 "Do not sell anything in this Discord.",
-                "Do not self-promote, unless it's a video made on Aspyre posted in " + ch(bot, "media") + ".",
+                "Do not self-promote, unless it's a video made on ParaPvP posted in " + ch(bot, "media") + ".",
                 "Do not tag staff members.",
                 "Do not advertise or mention other Minecraft servers.",
                 "Do not spam in any channel.",
@@ -113,7 +113,7 @@ public final class Messages {
                 "Do not impersonate staff members or content creators.",
                 "Do not DM members inviting them to other Discords or promoting another Minecraft server.",
                 "Being blacklisted in-game will result in a ban from the Discord.",
-                "Only post Aspyre recruitment messages in " + ch(bot, "recruitment") + ".",
+                "Only post ParaPvP recruitment messages in " + ch(bot, "recruitment") + ".",
                 "Use common sense.",
         };
         StringBuilder sb = new StringBuilder();
@@ -138,22 +138,22 @@ public final class Messages {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < r.length; i++) sb.append(i + 1).append(". ").append(r[i]).append('\n');
         return base(bot, "In-Game Rules", null).setDescription(sb.toString())
-                .addField("Outside of Aspyre",
-                        "We only handle what happens on Aspyre: in-game and in this Discord. We can't act on anything "
+                .addField("Outside of ParaPvP",
+                        "We only handle what happens on ParaPvP: in-game and in this Discord. We can't act on anything "
                         + "that happens anywhere else. Turn off DMs from server members if you're worried, and if someone "
-                        + "threatens you outside of Aspyre, contact the authorities.", false)
+                        + "threatens you outside of ParaPvP, contact the authorities.", false)
                 .setImage("attachment://" + BANNER_FILE).build();
     }
 
     /**
-     * Welcome line posted when someone joins. The :aspyre: custom emoji is looked up by name on the
-     * server each time, so it always uses the real emoji (falls back to plain ":aspyre:" if it's missing).
+     * Welcome line posted when someone joins. The custom emoji named in welcome_emoji is looked up on the
+     * server each time, so it always uses the real emoji (left off if the server does not have it).
      */
     public static String welcome(Bot bot, Member member) {
         String name = bot.cfg.welcomeEmoji;
         var found = member.getGuild().getEmojisByName(name, true);
-        String emoji = found.isEmpty() ? ":" + name + ":" : found.get(0).getAsMention();
-        return "Welcome to the official **Aspyre Network** Discord, " + member.getAsMention() + "! " + emoji;
+        String emoji = found.isEmpty() ? "" : " " + found.get(0).getAsMention();
+        return "Welcome to the official **ParaPvP** Discord, " + member.getAsMention() + "!" + emoji;
     }
 
     public static MessageEmbed boosts(Bot bot) {
@@ -180,7 +180,7 @@ public final class Messages {
         if (!bot.cfg.storeLink.isBlank()) sb.append("**Store**  ").append(bot.cfg.storeLink).append('\n');
         if (!bot.cfg.websiteLink.isBlank()) sb.append("**Website**  ").append(bot.cfg.websiteLink).append('\n');
         if (!bot.cfg.twitterLink.isBlank()) sb.append("**Twitter**  ").append(bot.cfg.twitterLink).append('\n');
-        return panel(bot, "Aspyre Network", sb.toString());
+        return panel(bot, "ParaPvP", sb.toString());
     }
 
     /** Store / Website / Twitter link buttons under the info panel (only the ones that are set). */
@@ -214,7 +214,7 @@ public final class Messages {
                 "store", "Send your **IGN**, the **package** you bought, and your **transaction ID** from the receipt."));
         TICKET_TYPES.put("appeal", new TicketType("Punishment Appeal", "⚖️", "Appeal a ban, mute or blacklist",
                 "appeal", "Send your **IGN**, the **punishment** you received, and **why** it should be removed."));
-        TICKET_TYPES.put("apply", new TicketType("Staff Application", "📝", "Apply to join the Aspyre staff team",
+        TICKET_TYPES.put("apply", new TicketType("Staff Application", "📝", "Apply to join the ParaPvP staff team",
                 "apply", "Send your **IGN**, **age**, **timezone**, and any **past staff experience**."));
     }
 

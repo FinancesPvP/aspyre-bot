@@ -65,6 +65,6 @@ public class Main {
         if (cfg.syncApi.enabled) {
             new SyncApi(bot, sync, news).start();
         }
-        log.info("Aspyre Network bot is online as {}", jda.getSelfUser().getName());
+        log.info("ParaPvP bot is online as {}", jda.getSelfUser().getName());
     }
 }
