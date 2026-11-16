@@ -1,7 +1,5 @@
-version: 1.9
-- Rewrote the rules panel in the style of CavePvP's: a clean numbered list of 20 Discord rules
-- In-game HCF rules now get their own embed under the Discord rules
-- Added an "Outside of Aspyre" note: staff only handle what happens in-game and in this Discord
+version: 1.10
+- New /say command: staff can post a message as the bot in any channel, with an optional title
 + Mod log channel: every ban, kick, timeout and purge logged
 + Message logs: deleted and edited messages go to a staff channel
 + /purge, /slowmode, /timeout and /kick

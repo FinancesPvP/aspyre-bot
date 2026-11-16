@@ -53,6 +53,10 @@ public class NewsFeature extends ListenerAdapter implements Feature {
     @Override
     public List<CommandData> commands() {
         return List.of(
+                Commands.slash("say", "Staff: post a message as the bot")
+                        .addOptions(new OptionData(OptionType.CHANNEL, "channel", "Where to post it (default: this channel)")
+                                .setChannelTypes(net.dv8tion.jda.api.entities.channel.ChannelType.TEXT,
+                                        net.dv8tion.jda.api.entities.channel.ChannelType.NEWS)),
                 Commands.slash("announce", "Staff: post an announcement")
                         .addOption(OptionType.BOOLEAN, "ping", "Ping the announcements role? (default: yes)"),
                 Commands.slash("liveupdate", "Staff: announce a live update on the UPDATE stage")
@@ -103,6 +107,7 @@ public class NewsFeature extends ListenerAdapter implements Feature {
         String sub = event.getSubcommandName();
         switch (event.getName()) {
             case "announce" -> announce(event);
+            case "say" -> say(event);
             case "liveupdate" -> liveUpdate(event);
             case "poll" -> poll(event);
             case "payout" -> payout(event);
@@ -148,8 +153,35 @@ public class NewsFeature extends ListenerAdapter implements Feature {
         event.replyModal(modal).queue();
     }
 
+    private void say(SlashCommandInteractionEvent event) {
+        if (!bot.requireStaff(event)) return;
+        var opt = event.getOption("channel");
+        long target = opt != null ? opt.getAsChannel().getIdLong() : event.getChannel().getIdLong();
+        event.replyModal(Modal.create("say:modal:" + target, "Post as the bot")
+                .addActionRow(TextInput.create("title", "Title (optional)", TextInputStyle.SHORT)
+                        .setRequired(false).setMaxLength(256).build())
+                .addActionRow(TextInput.create("body", "Message", TextInputStyle.PARAGRAPH).setMaxLength(4000).build())
+                .build()).queue();
+    }
+
+    private void submitSay(ModalInteractionEvent event) {
+        long target = Long.parseLong(event.getModalId().substring("say:modal:".length()));
+        GuildMessageChannel ch = event.getGuild() == null ? null : event.getGuild().getChannelById(GuildMessageChannel.class, target);
+        if (ch == null) {
+            event.reply("I can't find that channel.").setEphemeral(true).queue();
+            return;
+        }
+        String title = event.getValue("title") == null ? "" : event.getValue("title").getAsString().trim();
+        EmbedBuilder eb = Messages.base(bot, title.isEmpty() ? null : title, null)
+                .setDescription(event.getValue("body").getAsString());
+        ch.sendMessageEmbeds(eb.build()).queue(
+                msg -> event.reply("Posted: " + msg.getJumpUrl()).setEphemeral(true).queue(),
+                err -> event.reply("I couldn't post there (missing permissions?).").setEphemeral(true).queue());
+    }
+
     @Override
     public void onModalInteraction(ModalInteractionEvent event) {
+        if (event.getModalId().startsWith("say:modal:")) { submitSay(event); return; }
         if (!event.getModalId().startsWith("announce:modal:")) return;
         boolean ping = event.getModalId().endsWith("true");
         String title = event.getValue("title").getAsString();
