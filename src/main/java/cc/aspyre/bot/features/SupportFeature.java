@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -134,6 +135,14 @@ public class SupportFeature extends ListenerAdapter implements Feature {
     }
 
     @Override
+    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+        if (!event.getComponentId().equals("ticket:select") || event.getValues().isEmpty()) return;
+        openTicket(event, event.getValues().get(0));
+        // Re-draw the menu so it goes back to "Make a selection" instead of showing the last pick.
+        event.getMessage().editMessageComponents(ActionRow.of(Messages.ticketMenu())).queue(null, err -> {});
+    }
+
+    @Override
     public void onModalInteraction(ModalInteractionEvent event) {
         switch (event.getModalId()) {
             case "bug:modal" -> submitBug(event);
@@ -144,8 +153,9 @@ public class SupportFeature extends ListenerAdapter implements Feature {
 
     // ==================================================================== tickets
 
-    private void openTicket(ButtonInteractionEvent event, String type) {
-        if (!Messages.TICKET_TYPES.containsKey(type)) return;
+    private void openTicket(IReplyCallback event, String type) {
+        if (!Messages.TICKET_TYPES.containsKey(type)) type = "general";
+        Messages.TicketType ticketType = Messages.TICKET_TYPES.get(type);
         Member member = event.getMember();
         Guild guild = event.getGuild();
 
@@ -162,11 +172,11 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         if (catId == 0) catId = bot.cfg.ticketCategories.getOrDefault("general", 0L);
         Category category = catId == 0 ? null : guild.getCategoryById(catId);
 
-        String name = ("ticket-" + member.getUser().getName()).toLowerCase();
+        String name = (ticketType.prefix() + "-" + member.getUser().getName()).toLowerCase();
         if (name.length() > 90) name = name.substring(0, 90);
 
         var action = guild.createTextChannel(name, category)
-                .setTopic(Messages.TICKET_TYPES.get(type).label() + " ticket for " + member.getUser().getName()
+                .setTopic(ticketType.label() + " ticket for " + member.getUser().getName()
                         + " (" + member.getId() + ")")
                 .addPermissionOverride(guild.getPublicRole(), null, EnumSet.of(Permission.VIEW_CHANNEL))
                 .addMemberPermissionOverride(member.getIdLong(), TICKET_PERMS, null)
@@ -177,12 +187,13 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         long staff = bot.cfg.role("staff");
         if (staff != 0 && guild.getRoleById(staff) != null) action = action.addRolePermissionOverride(staff, TICKET_PERMS, null);
 
+        final String ticketKey = type;
         action.queue(channel -> {
             bot.db.update("INSERT INTO tickets (channel_id, user_id, type, opened_at, closed, last_activity, warned) "
-                    + "VALUES (?, ?, ?, ?, 0, ?, 0)", channel.getIdLong(), member.getIdLong(), type, Util.nowSec(), Util.nowSec());
+                    + "VALUES (?, ?, ?, ?, 0, ?, 0)", channel.getIdLong(), member.getIdLong(), ticketKey, Util.nowSec(), Util.nowSec());
             String staffPing = Messages.role(bot, "staff");
             channel.sendMessage(member.getAsMention() + (staffPing.isEmpty() ? "" : " " + staffPing))
-                    .setEmbeds(Messages.ticketOpened(bot, member))
+                    .setEmbeds(Messages.ticketOpened(bot, member, ticketKey))
                     .setComponents(ticketButtons(false))
                     .setAllowedMentions(EnumSet.of(Message.MentionType.USER, Message.MentionType.ROLE))
                     .queue(msg -> bot.db.update("UPDATE tickets SET message_id = ? WHERE channel_id = ?",
@@ -326,7 +337,7 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         if (msgId == 0) return;
         Member owner = channel.getGuild().getMemberById(Database.num(row, "user_id"));
         var eb = owner != null
-                ? new net.dv8tion.jda.api.EmbedBuilder(Messages.ticketOpened(bot, owner))
+                ? new net.dv8tion.jda.api.EmbedBuilder(Messages.ticketOpened(bot, owner, String.valueOf(row.get("type"))))
                 : Messages.base(bot, "Ticket", "Thanks for creating a ticket!\nA staff member will be assisting you shortly.");
         if (claimedBy != 0) eb.addField("Claimed by", "<@" + claimedBy + ">", true);
         channel.editMessageEmbedsById(msgId, eb.build()).setComponents(ticketButtons(claimedBy != 0)).queue(null, err -> {});

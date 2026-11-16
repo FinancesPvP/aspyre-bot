@@ -1,8 +1,11 @@
-version: 1.7
-- Tickets now close automatically after 36 hours with no messages
-- After 24 hours of silence the bot warns in the ticket and pings the person who opened it
-- Any reply resets the timer, and the transcript still goes to the log channel and the member's DMs
-+ Ticket ratings: after a ticket closes, the member rates their support from 1–5 stars
-+ Message logs: post deleted and edited messages to a staff log channel
-+ Live member count: a locked voice channel that shows the server's member count
-+ In-game punishment sync: bans and mutes on the Minecraft server show up in a Discord log channel
+version: 1.8
+- New ticket panel: pick a ticket type from a dropdown, like CavePvP's Support Center
+- Ticket types: General Support, Player Report, Store Support, Punishment Appeal and Staff Application
+- Each ticket is named by its type (report-name, store-name, appeal-name…) and tells the member exactly what to send first
+- Each type can go into its own Discord category; anything without one goes into General
++ Server status panel: live player count and status for aspyre.cc, updated every minute
++ KOTH / Conquest / EOTW alerts: event start pings with a countdown, sent to an alert role
++ Warn system: /warn with a history log and automatic timeouts after repeated warnings
++ Invite tracking: see who invited each member and an invites leaderboard
++ Ticket ratings: members rate their support 1–5 stars after a ticket closes
++ Message logs: deleted and edited messages logged to a staff channel

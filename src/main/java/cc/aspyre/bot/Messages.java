@@ -163,25 +163,51 @@ public final class Messages {
 
     // ------------------------------------------------------------------ SUPPORT
 
-    public record TicketType(String label, String emoji, String description) {}
+    /**
+     * label: shown in the dropdown and ticket; prefix: channel name prefix; prompt: what the member should send first.
+     */
+    public record TicketType(String label, String emoji, String description, String prefix, String prompt) {}
 
-    /** Ticket types other code still understands; the panel shows a single "Create a Ticket" button. */
+    /** Ticket types in the panel's dropdown, in order. Each can have its own Discord category in ticket_categories. */
     public static final Map<String, TicketType> TICKET_TYPES = new LinkedHashMap<>();
     static {
-        TICKET_TYPES.put("general", new TicketType("Ticket", "🎟️", "support or questions"));
-        TICKET_TYPES.put("store", new TicketType("Store Ticket", "💳", "missing items, payments"));
+        TICKET_TYPES.put("general", new TicketType("General Support", "📩", "Questions, help, or anything else",
+                "ticket", "Tell us what you need help with and a staff member will be with you shortly."));
+        TICKET_TYPES.put("report", new TicketType("Player Report", "🚨", "Report a cheater or rule breaker",
+                "report", "Send the player's **IGN**, the **rule** they broke, and any **video or screenshots**."));
+        TICKET_TYPES.put("store", new TicketType("Store Support", "💳", "Missing purchases, payments or ranks",
+                "store", "Send your **IGN**, the **package** you bought, and your **transaction ID** from the receipt."));
+        TICKET_TYPES.put("appeal", new TicketType("Punishment Appeal", "⚖️", "Appeal a ban, mute or blacklist",
+                "appeal", "Send your **IGN**, the **punishment** you received, and **why** it should be removed."));
+        TICKET_TYPES.put("apply", new TicketType("Staff Application", "📝", "Apply to join the Aspyre staff team",
+                "apply", "Send your **IGN**, **age**, **timezone**, and any **past staff experience**."));
     }
 
     public static MessageEmbed ticketPanel(Bot bot) {
-        return panel(bot, "Create a Ticket",
-                "Need support or want to ask a question?\n"
-                + "Click the button below to create a ticket!");
+        return new net.dv8tion.jda.api.EmbedBuilder(panel(bot, "Need Help?",
+                "Select the ticket type below and our team will assist you as soon as possible.\n\n"
+                + "⚠️ *Abuse of the ticket system may result in restrictions.*"))
+                .setAuthor("Support Center", null, bot.jda.getSelfUser().getEffectiveAvatarUrl())
+                .build();
+    }
+
+    public static StringSelectMenu ticketMenu() {
+        List<SelectOption> options = new ArrayList<>();
+        TICKET_TYPES.forEach((key, t) -> options.add(SelectOption.of(t.label(), key)
+                .withDescription(t.description()).withEmoji(Emoji.fromUnicode(t.emoji()))));
+        return StringSelectMenu.create("ticket:select").setPlaceholder("Make a selection").addOptions(options).build();
     }
 
     public static MessageEmbed ticketOpened(Bot bot, Member member) {
-        return embed(bot, "Ticket-" + member.getUser().getName(),
-                "Thanks for creating a ticket!\n"
-                + "A staff member will be assisting you shortly.");
+        return ticketOpened(bot, member, "general");
+    }
+
+    public static MessageEmbed ticketOpened(Bot bot, Member member, String type) {
+        TicketType t = TICKET_TYPES.getOrDefault(type, TICKET_TYPES.get("general"));
+        return new net.dv8tion.jda.api.EmbedBuilder(embed(bot, t.label() + " — " + member.getUser().getName(),
+                "Thanks for creating a ticket!\n" + t.prompt()))
+                .addField("Type", t.emoji() + " " + t.label(), true)
+                .build();
     }
 
     public static MessageEmbed bugPanel(Bot bot) {
@@ -274,8 +300,7 @@ public final class Messages {
                         .build()));
         PANELS.add(new Panel("ticket-panel", "Show the Create a Ticket panel", b ->
                 new MessageCreateBuilder().setEmbeds(ticketPanel(b)).addFiles(bannerFile())
-                        .setComponents(ActionRow.of(Button.secondary("ticket:open:general", "Create a Ticket")
-                                .withEmoji(Emoji.fromUnicode("🎟️"))))
+                        .setComponents(ActionRow.of(ticketMenu()))
                         .build()));
         PANELS.add(new Panel("roles-panel", "Show the alert roles select menu", b -> {
             MessageCreateBuilder m = new MessageCreateBuilder().setEmbeds(rolesPanel(b)).addFiles(bannerFile());
