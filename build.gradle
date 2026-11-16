@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.gradleup.shadow' version '8.3.5'
+}
+
+group = 'cc.aspyre'
+version = '1.0.0'
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation('net.dv8tion:JDA:5.2.1') {
+        exclude module: 'opus-java' // no voice features needed
+        exclude module: 'tink'      // only used for voice
+    }
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.xerial:sqlite-jdbc:3.46.1.3'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.24.1'
+    implementation 'org.apache.logging.log4j:log4j-core:2.24.1'
+}
+
+application {
+    mainClass = 'cc.aspyre.bot.Main'
+}
+
+shadowJar {
+    archiveFileName = 'AspyreBot.jar'
+    mergeServiceFiles()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17 // runs on Java 17 or newer
+}

@@ -1,0 +1,301 @@
+package cc.aspyre.bot;
+
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.utils.FileUpload;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+/**
+ * Every message the bot posts, in one place so the wording is easy to change.
+ *
+ * Style (matches the Fyre/HCTeams bot): a title, the text in a quote block, a timestamp, and a
+ * "Powered by Aspyre Network" footer with the bot's avatar. Panels also show the Aspyre banner.
+ */
+public final class Messages {
+    private Messages() {}
+
+    public static final String POWERED_BY = "Powered by Aspyre Network";
+    private static final String BANNER_FILE = "banner.png";
+    private static byte[] bannerBytes;
+
+    // ------------------------------------------------------------------ helpers
+
+    /** The standard embed: title, quoted text, colour, footer and timestamp. */
+    public static EmbedBuilder base(Bot bot, String title, String description) {
+        EmbedBuilder b = new EmbedBuilder()
+                .setTitle(title)
+                .setDescription(description == null || description.isBlank() ? null : ">>> " + description)
+                .setColor(bot.color())
+                .setTimestamp(Instant.now());
+        String icon = bot.jda == null ? null : bot.jda.getSelfUser().getEffectiveAvatarUrl();
+        b.setFooter(POWERED_BY, icon);
+        return b;
+    }
+
+    public static MessageEmbed embed(Bot bot, String title, String description) {
+        return base(bot, title, description).build();
+    }
+
+    /** A panel embed: the standard embed plus the Aspyre banner along the bottom. */
+    public static MessageEmbed panel(Bot bot, String title, String description) {
+        return base(bot, title, description).setImage("attachment://" + BANNER_FILE).build();
+    }
+
+    /** The banner image file that panel messages must attach. */
+    public static FileUpload bannerFile() {
+        if (bannerBytes == null) {
+            try (InputStream in = Messages.class.getResourceAsStream("/brand/" + BANNER_FILE)) {
+                bannerBytes = in == null ? new byte[0] : in.readAllBytes();
+            } catch (IOException e) {
+                bannerBytes = new byte[0];
+            }
+        }
+        return FileUpload.fromData(bannerBytes, BANNER_FILE);
+    }
+
+    /** Clickable #channel mention for a config key, or a plain #name if it isn't set. */
+    public static String ch(Bot bot, String key) {
+        long id = bot.cfg.channel(key);
+        return id != 0 ? "<#" + id + ">" : "#" + key.replace('_', '-');
+    }
+
+    /** Role mention for a config key, or "" if it isn't set. */
+    public static String role(Bot bot, String key) {
+        long id = bot.cfg.role(key);
+        return id != 0 ? "<@&" + id + ">" : "";
+    }
+
+    // ------------------------------------------------------------------ INFORMATION
+
+    public static MessageEmbed syncPanel(Bot bot) {
+        return panel(bot, "Sync",
+                "Link your Minecraft account to get your **Synced** role, your rank and your IGN as your nickname.\n\n"
+                + "**#1**: Join `" + bot.cfg.serverIp + "`\n"
+                + "**#2**: Type `/sync` in-game and copy your code\n"
+                + "**#3**: Type `!sync <code>` in this channel, or press **Sync** below\n\n"
+                + "Codes expire after 5 minutes and work once.");
+    }
+
+    public static MessageEmbed rules(Bot bot) {
+        Config c = bot.cfg;
+        return panel(bot, "Rules",
+                "**#1**: Don't cheat. No hacked clients, X-ray, auto-clickers, macros or anything over " + c.maxCps + " CPS.\n"
+                + "**#2**: Don't abuse bugs or dupes. Report them in a ticket.\n"
+                + "**#3**: Don't go over the faction limit (" + c.factionSize + " members, " + c.allyLimit + " allies) or team past it.\n"
+                + "**#4**: Don't evade bans or punishments on alts.\n"
+                + "**#5**: Don't build lag machines.\n"
+                + "**#6**: Don't trade items, accounts or factions for real money.\n"
+                + "**#7**: Don't glitch KOTH, Conquest or EOTW caps or abuse safe zones.\n"
+                + "**#8**: Combat logging is at your own risk.\n"
+                + "**#9**: Don't be overly toxic or use racial/homophobic slurs.\n"
+                + "**#10**: Don't threaten to dox, DDoS or swat (no exceptions).\n"
+                + "**#11**: Don't advertise or DM advertise.\n"
+                + "**#12**: Don't disrespect staff or ping them for no reason. Appeal in " + ch(bot, "support_tickets") + ".\n"
+                + "**#13**: Follow the Discord TOS.");
+    }
+
+    /**
+     * Welcome line posted when someone joins. The :aspyre: custom emoji is looked up by name on the
+     * server each time, so it always uses the real emoji (falls back to plain ":aspyre:" if it's missing).
+     */
+    public static String welcome(Bot bot, Member member) {
+        String name = bot.cfg.welcomeEmoji;
+        var found = member.getGuild().getEmojisByName(name, true);
+        String emoji = found.isEmpty() ? ":" + name + ":" : found.get(0).getAsMention();
+        return "Welcome to the official **Aspyre Network** Discord, " + member.getAsMention() + "! " + emoji;
+    }
+
+    public static MessageEmbed boosts(Bot bot) {
+        String boosterRole = role(bot, "booster");
+        return panel(bot, "Boosts",
+                "Boosting unlocks perks for the whole server and gets you:\n"
+                + "**#1**: The " + (boosterRole.isEmpty() ? "**Booster**" : boosterRole) + " role\n"
+                + "**#2**: Access to booster-only giveaways\n"
+                + (bot.cfg.boosterPerk.isBlank() ? "" : "**#3**: " + bot.cfg.boosterPerk + "\n")
+                + "\nThanks to everyone keeping us boosted!");
+    }
+
+    public static MessageEmbed boostThanks(Bot bot, Member member) {
+        return base(bot, "New Boost",
+                member.getAsMention() + " just boosted the server!\n"
+                + "We're now at **" + member.getGuild().getBoostCount() + "** boosts. Thank you!")
+                .setThumbnail(member.getEffectiveAvatarUrl())
+                .build();
+    }
+
+    public static MessageEmbed information(Bot bot) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("**IP**  `").append(bot.cfg.serverIp).append("`\n");
+        if (!bot.cfg.storeLink.isBlank()) sb.append("**Store**  ").append(bot.cfg.storeLink).append('\n');
+        if (!bot.cfg.websiteLink.isBlank()) sb.append("**Website**  ").append(bot.cfg.websiteLink).append('\n');
+        if (!bot.cfg.twitterLink.isBlank()) sb.append("**Twitter**  ").append(bot.cfg.twitterLink).append('\n');
+        return panel(bot, "Aspyre Network", sb.toString());
+    }
+
+    /** Store / Website / Twitter link buttons under the info panel (only the ones that are set). */
+    public static List<Button> infoButtons(Bot bot) {
+        List<Button> buttons = new ArrayList<>();
+        if (isLink(bot.cfg.storeLink)) buttons.add(Button.link(bot.cfg.storeLink, "Store").withEmoji(Emoji.fromUnicode("🪙")));
+        if (isLink(bot.cfg.websiteLink)) buttons.add(Button.link(bot.cfg.websiteLink, "Website").withEmoji(Emoji.fromUnicode("🌐")));
+        if (isLink(bot.cfg.twitterLink)) buttons.add(Button.link(bot.cfg.twitterLink, "Twitter").withEmoji(Emoji.fromUnicode("🐦")));
+        return buttons;
+    }
+
+    private static boolean isLink(String s) {
+        return s != null && (s.startsWith("https://") || s.startsWith("http://"));
+    }
+
+    // ------------------------------------------------------------------ SUPPORT
+
+    public record TicketType(String label, String emoji, String description) {}
+
+    /** Ticket types other code still understands; the panel shows a single "Create a Ticket" button. */
+    public static final Map<String, TicketType> TICKET_TYPES = new LinkedHashMap<>();
+    static {
+        TICKET_TYPES.put("general", new TicketType("Ticket", "🎟️", "support or questions"));
+        TICKET_TYPES.put("store", new TicketType("Store Ticket", "💳", "missing items, payments"));
+    }
+
+    public static MessageEmbed ticketPanel(Bot bot) {
+        return panel(bot, "Create a Ticket",
+                "Need support or want to ask a question?\n"
+                + "Click the button below to create a ticket!");
+    }
+
+    public static MessageEmbed ticketOpened(Bot bot, Member member) {
+        return embed(bot, "Ticket-" + member.getUser().getName(),
+                "Thanks for creating a ticket!\n"
+                + "A staff member will be assisting you shortly.");
+    }
+
+    public static MessageEmbed bugPanel(Bot bot) {
+        return panel(bot, "Bug Reports",
+                "Found a bug? Use `/bugreport` and fill in the form.\n"
+                + "Exploits that give an unfair advantage go in a **ticket**, not here.");
+    }
+
+    public static MessageEmbed suggestionPanel(Bot bot) {
+        return panel(bot, "Suggestions",
+                "Got an idea? Use `/suggest` and the community can vote on it.\n"
+                + "Check that your idea hasn't already been suggested.");
+    }
+
+    // ------------------------------------------------------------------ ALERT ROLES
+
+    public static MessageEmbed rolesPanel(Bot bot) {
+        StringBuilder sb = new StringBuilder("Select the roles you want to receive alerts for.\n");
+        bot.cfg.notificationRoles.forEach((name, id) -> sb.append("\n**").append(name).append("**"));
+        return panel(bot, "🔊 Alerts", sb.toString());
+    }
+
+    public static StringSelectMenu rolesMenu(Bot bot) {
+        List<SelectOption> options = new ArrayList<>();
+        bot.cfg.notificationRoles.forEach((name, id) -> options.add(SelectOption.of(name, String.valueOf(id))));
+        return StringSelectMenu.create("roles:select")
+                .setPlaceholder("Select Alerts")
+                .addOptions(options)
+                .setMinValues(0)
+                .setMaxValues(Math.max(1, options.size()))
+                .build();
+    }
+
+    // ------------------------------------------------------------------ CHAT
+
+    public static MessageEmbed generalPin(Bot bot) {
+        return embed(bot, "General",
+                "Talk about anything, keep it friendly.\n"
+                + "**Commands** " + ch(bot, "bot_commands") + "\n"
+                + "**Memes** " + ch(bot, "memes") + "\n"
+                + "**Help** " + ch(bot, "support_tickets"));
+    }
+
+    public static MessageEmbed mediaPin(Bot bot) {
+        return embed(bot, "Media",
+                "Share clips, screenshots, montages and art.\n"
+                + "No chatting here, use threads to reply. Keep it SFW and credit other people's work.");
+    }
+
+    public static MessageEmbed recruitPanel(Bot bot) {
+        return panel(bot, "Recruitment",
+                "Looking for a team or players? Use `/recruit` and fill in the form.\n"
+                + "One post per 24 hours. No poaching in DMs.");
+    }
+
+    public static MessageEmbed botCommandsPin(Bot bot) {
+        return embed(bot, "Bot Commands",
+                "Run all bot commands here.\n"
+                + "**#1**: `/stats`\n**#2**: `/leaderboard show`\n**#3**: `/suggest`\n**#4**: `/bugreport`\n\n"
+                + "Type `/` to see everything the bot can do.");
+    }
+
+    public static MessageEmbed memesPin(Bot bot) {
+        return embed(bot, "Memes",
+                "Post your best ones.\n"
+                + "No NSFW, no memes targeting real people, no reposting the same meme all day.");
+    }
+
+    // ------------------------------------------------------------------ panel commands
+
+    /**
+     * One slash command per panel. Staff running it posts the panel in the current channel;
+     * anyone else (or staff with private:true) sees a private copy.
+     */
+    public record Panel(String command, String description, Function<Bot, MessageCreateData> build) {}
+
+    public static final List<Panel> PANELS = new ArrayList<>();
+    static {
+        PANELS.add(new Panel("rules", "Show the server rules", b -> withBanner(rules(b))));
+        PANELS.add(new Panel("info", "Show the server IP, store and links", b -> {
+            MessageCreateBuilder m = new MessageCreateBuilder().setEmbeds(information(b)).addFiles(bannerFile());
+            List<Button> buttons = infoButtons(b);
+            if (!buttons.isEmpty()) m.setComponents(ActionRow.of(buttons));
+            return m.build();
+        }));
+        PANELS.add(new Panel("boosts", "Show the booster perks", b -> withBanner(boosts(b))));
+        PANELS.add(new Panel("sync-panel", "Show the account sync panel with its Sync button", b ->
+                new MessageCreateBuilder().setEmbeds(syncPanel(b)).addFiles(bannerFile())
+                        .setComponents(ActionRow.of(Button.secondary("sync:open", "Sync").withEmoji(Emoji.fromUnicode("✨"))))
+                        .build()));
+        PANELS.add(new Panel("ticket-panel", "Show the Create a Ticket panel", b ->
+                new MessageCreateBuilder().setEmbeds(ticketPanel(b)).addFiles(bannerFile())
+                        .setComponents(ActionRow.of(Button.secondary("ticket:open:general", "Create a Ticket")
+                                .withEmoji(Emoji.fromUnicode("🎟️"))))
+                        .build()));
+        PANELS.add(new Panel("roles-panel", "Show the alert roles select menu", b -> {
+            MessageCreateBuilder m = new MessageCreateBuilder().setEmbeds(rolesPanel(b)).addFiles(bannerFile());
+            if (!b.cfg.notificationRoles.isEmpty()) m.setComponents(ActionRow.of(rolesMenu(b)));
+            return m.build();
+        }));
+        PANELS.add(new Panel("bug-panel", "Show how to report bugs", b -> withBanner(bugPanel(b))));
+        PANELS.add(new Panel("suggestion-panel", "Show how to make suggestions", b -> withBanner(suggestionPanel(b))));
+        PANELS.add(new Panel("recruit-panel", "Show how recruitment posts work", b -> withBanner(recruitPanel(b))));
+        PANELS.add(new Panel("general-pin", "Show the general chat guidelines", b -> plain(generalPin(b))));
+        PANELS.add(new Panel("media-pin", "Show the media channel guidelines", b -> plain(mediaPin(b))));
+        PANELS.add(new Panel("commands-pin", "Show the useful bot commands", b -> plain(botCommandsPin(b))));
+        PANELS.add(new Panel("memes-pin", "Show the memes channel guidelines", b -> plain(memesPin(b))));
+    }
+
+    private static MessageCreateData withBanner(MessageEmbed e) {
+        return new MessageCreateBuilder().setEmbeds(e).addFiles(bannerFile()).build();
+    }
+
+    private static MessageCreateData plain(MessageEmbed e) {
+        return new MessageCreateBuilder().setEmbeds(e).build();
+    }
+}

@@ -1,0 +1,72 @@
+{
+  "token": "PUT_YOUR_BOT_TOKEN_HERE",
+  "guild_id": 1297681388337893406,
+  "server_ip": "aspyre.cc",
+  "store_link": "https://store.aspyre.cc",
+  "website_link": "https://aspyre.cc",
+  "max_cps": 16,
+  "faction_size": 10,
+  "ally_limit": 0,
+  "max_strikes": 3,
+  "booster_perk": "Priority queue on the server",
+  "embed_color": "#F0601E",
+  "channels": {
+    "sync": 0,
+    "rules": 0,
+    "welcome": 0,
+    "boosts": 0,
+    "information": 0,
+    "announcements": 0,
+    "polls": 0,
+    "payouts": 0,
+    "giveaways": 0,
+    "leaderboards": 0,
+    "ftop_strikes": 0,
+    "update_stage": 0,
+    "support_tickets": 0,
+    "bug_reports": 0,
+    "suggestions": 0,
+    "general": 0,
+    "media": 0,
+    "recruitment": 0,
+    "bot_commands": 0,
+    "memes": 0,
+    "transcripts": 0
+  },
+  "ticket_categories": {
+    "general": 0,
+    "store": 0,
+    "payout": 0,
+    "appeal": 0,
+    "report": 0
+  },
+  "roles": {
+    "staff": 0,
+    "synced": 0,
+    "booster": 0,
+    "announcements_ping": 0,
+    "polls_ping": 0,
+    "giveaways_ping": 0,
+    "default": 0
+  },
+  "rank_roles": {
+    "VIP": 0,
+    "MVP": 0
+  },
+  "sync_api": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8095,
+    "secret": "CHANGE_ME_TO_A_LONG_RANDOM_STRING"
+  },
+  "twitter_link": "",
+  "presences": [
+    "aspyre.cc",
+    "store.aspyre.cc",
+    "with {members} members"
+  ],
+  "notification_roles": {
+    "Announcements": 0,
+    "Giveaways": 0
+  }
+}
