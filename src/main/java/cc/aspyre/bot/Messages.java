@@ -92,22 +92,57 @@ public final class Messages {
                 + "Codes expire after 5 minutes and work once.");
     }
 
+    /** Discord rules, a numbered list like CavePvP's. */
     public static MessageEmbed rules(Bot bot) {
+        String[] r = {
+                "Do not be toxic.",
+                "Do not post inappropriate pictures, links or videos.",
+                "No NSFW posts.",
+                "Do not sell anything in this Discord.",
+                "Do not self-promote, unless it's a video made on Aspyre posted in " + ch(bot, "media") + ".",
+                "Do not tag staff members.",
+                "Do not advertise or mention other Minecraft servers.",
+                "Do not spam in any channel.",
+                "Only use bot commands in " + ch(bot, "bot_commands") + ".",
+                "Do not be racist, sexist or homophobic in any channel.",
+                "No doxing or DDoS threats, even as a joke.",
+                "Do not post anybody's personal information.",
+                "Listen to and respect staff members.",
+                "Do not cause unneeded drama.",
+                "Do not get other people to break the rules.",
+                "Do not impersonate staff members or content creators.",
+                "Do not DM members inviting them to other Discords or promoting another Minecraft server.",
+                "Being blacklisted in-game will result in a ban from the Discord.",
+                "Only post Aspyre recruitment messages in " + ch(bot, "recruitment") + ".",
+                "Use common sense.",
+        };
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < r.length; i++) sb.append(i + 1).append(". ").append(r[i]).append('\n');
+        return base(bot, "Rules", null).setDescription(sb.toString()).build();
+    }
+
+    /** In-game HCF rules, posted under the Discord rules with the banner. */
+    public static MessageEmbed gameRules(Bot bot) {
         Config c = bot.cfg;
-        return panel(bot, "Rules",
-                "**#1**: Don't cheat. No hacked clients, X-ray, auto-clickers, macros or anything over " + c.maxCps + " CPS.\n"
-                + "**#2**: Don't abuse bugs or dupes. Report them in a ticket.\n"
-                + "**#3**: Don't go over the faction limit (" + c.factionSize + " members, " + c.allyLimit + " allies) or team past it.\n"
-                + "**#4**: Don't evade bans or punishments on alts.\n"
-                + "**#5**: Don't build lag machines.\n"
-                + "**#6**: Don't trade items, accounts or factions for real money.\n"
-                + "**#7**: Don't glitch KOTH, Conquest or EOTW caps or abuse safe zones.\n"
-                + "**#8**: Combat logging is at your own risk.\n"
-                + "**#9**: Don't be overly toxic or use racial/homophobic slurs.\n"
-                + "**#10**: Don't threaten to dox, DDoS or swat (no exceptions).\n"
-                + "**#11**: Don't advertise or DM advertise.\n"
-                + "**#12**: Don't disrespect staff or ping them for no reason. Appeal in " + ch(bot, "support_tickets") + ".\n"
-                + "**#13**: Follow the Discord TOS.");
+        String[] r = {
+                "No hacked clients, X-ray, auto-clickers, macros or anything over " + c.maxCps + " CPS.",
+                "Do not abuse bugs or dupes. Report them in a ticket.",
+                "Do not go over the faction limit (" + c.factionSize + " members, " + c.allyLimit + " allies) or team past it.",
+                "Do not evade bans or punishments on alts.",
+                "Do not build lag machines.",
+                "Do not trade items, accounts or factions for real money.",
+                "Do not glitch KOTH, Conquest or EOTW caps or abuse safe zones.",
+                "Combat logging is at your own risk.",
+                "Appeal punishments in " + ch(bot, "support_tickets") + ", not in chat.",
+        };
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < r.length; i++) sb.append(i + 1).append(". ").append(r[i]).append('\n');
+        return base(bot, "In-Game Rules", null).setDescription(sb.toString())
+                .addField("Outside of Aspyre",
+                        "We only handle what happens on Aspyre: in-game and in this Discord. We can't act on anything "
+                        + "that happens anywhere else. Turn off DMs from server members if you're worried, and if someone "
+                        + "threatens you outside of Aspyre, contact the authorities.", false)
+                .setImage("attachment://" + BANNER_FILE).build();
     }
 
     /**
@@ -286,7 +321,8 @@ public final class Messages {
 
     public static final List<Panel> PANELS = new ArrayList<>();
     static {
-        PANELS.add(new Panel("rules", "Show the server rules", b -> withBanner(rules(b))));
+        PANELS.add(new Panel("rules", "Show the server rules", b ->
+                new MessageCreateBuilder().setEmbeds(rules(b), gameRules(b)).addFiles(bannerFile()).build()));
         PANELS.add(new Panel("info", "Show the server IP, store and links", b -> {
             MessageCreateBuilder m = new MessageCreateBuilder().setEmbeds(information(b)).addFiles(bannerFile());
             List<Button> buttons = infoButtons(b);
