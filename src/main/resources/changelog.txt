@@ -1,3 +1,8 @@
-version: 1.4
-- Removed the `/welcome-preview` test command
-- The bot now posts a changelog in this channel after every update
+version: 1.5
+- Changelog posts now include ideas for the next update
++ Ticket ratings: after a ticket closes, the member rates their support from 1–5 stars
++ Auto-close inactive tickets after 48 hours with no messages, with a warning first
++ Staff ticket stats: `/ticket stats` shows how many tickets each staff member has claimed and closed
++ Message logs: post deleted and edited messages to a staff log channel
++ Live member count: a locked voice channel that shows the server's member count
++ In-game punishment sync: bans and mutes on the Minecraft server show up in a Discord log channel

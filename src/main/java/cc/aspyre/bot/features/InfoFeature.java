@@ -45,13 +45,18 @@ public class InfoFeature extends ListenerAdapter implements Feature {
                     .findFirst().orElse(null);
             if (version == null || version.equals(bot.db.get("changelog:posted"))) return;
 
+            // "- " lines are what changed, "+ " lines are ideas for the next update.
             StringBuilder changes = new StringBuilder();
+            StringBuilder ideas = new StringBuilder();
             for (String l : lines) {
                 if (l.startsWith("- ")) changes.append("**•** ").append(l.substring(2).trim()).append('\n');
+                else if (l.startsWith("+ ")) ideas.append("**•** ").append(l.substring(2).trim()).append('\n');
             }
             GuildMessageChannel ch = bot.channel("changelog");
             if (ch == null || changes.length() == 0) return;
-            ch.sendMessageEmbeds(Messages.base(bot, "Update " + version, changes.toString()).build()).complete();
+            var eb = Messages.base(bot, "Update " + version, changes.toString());
+            if (ideas.length() > 0) eb.addField("Ideas for the next update", ideas.toString(), false);
+            ch.sendMessageEmbeds(eb.build()).complete();
             bot.db.set("changelog:posted", version);
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(InfoFeature.class).warn("Couldn't post changelog", e);
