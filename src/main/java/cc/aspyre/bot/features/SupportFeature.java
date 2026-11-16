@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -60,7 +61,8 @@ public class SupportFeature extends ListenerAdapter implements Feature {
     public SupportFeature(Bot bot) {
         this.bot = bot;
         // Columns added for ticket claiming (older databases won't have them yet).
-        for (String col : List.of("claimed_by INTEGER", "message_id INTEGER", "closed_by INTEGER", "closed_at INTEGER")) {
+        for (String col : List.of("claimed_by INTEGER", "message_id INTEGER", "closed_by INTEGER", "closed_at INTEGER",
+                "last_activity INTEGER", "warned INTEGER DEFAULT 0")) {
             try {
                 bot.db.update("ALTER TABLE tickets ADD COLUMN " + col);
             } catch (RuntimeException alreadyThere) {
@@ -176,8 +178,8 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         if (staff != 0 && guild.getRoleById(staff) != null) action = action.addRolePermissionOverride(staff, TICKET_PERMS, null);
 
         action.queue(channel -> {
-            bot.db.update("INSERT INTO tickets (channel_id, user_id, type, opened_at, closed) VALUES (?, ?, ?, ?, 0)",
-                    channel.getIdLong(), member.getIdLong(), type, Util.nowSec());
+            bot.db.update("INSERT INTO tickets (channel_id, user_id, type, opened_at, closed, last_activity, warned) "
+                    + "VALUES (?, ?, ?, ?, 0, ?, 0)", channel.getIdLong(), member.getIdLong(), type, Util.nowSec(), Util.nowSec());
             String staffPing = Messages.role(bot, "staff");
             channel.sendMessage(member.getAsMention() + (staffPing.isEmpty() ? "" : " " + staffPing))
                     .setEmbeds(Messages.ticketOpened(bot, member))
@@ -207,9 +209,13 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         bot.db.update("UPDATE tickets SET closed = 1, closed_by = ?, closed_at = ? WHERE channel_id = ?",
                 event.getUser().getIdLong(), Util.nowSec(), channel.getIdLong());
         event.replyEmbeds(Messages.embed(bot, "Ticket Closing", "This ticket will be deleted in 5 seconds.")).queue();
-        long claimedBy = Database.num(row, "claimed_by");
+        finishClose(channel, row, event.getUser().getAsMention());
+    }
 
-        String closer = event.getUser().getAsMention();
+    /** Transcript to the log channel + DM to the owner, then deletes the channel 5 seconds later. */
+    private void finishClose(TextChannel channel, Map<String, Object> row, String closer) {
+        long ownerId = Database.num(row, "user_id");
+        long claimedBy = Database.num(row, "claimed_by");
 
         // Newest first from Discord, so reverse it for the transcript.
         channel.getIterableHistory().takeAsync(5000).thenAccept(messages -> {
@@ -247,6 +253,58 @@ public class SupportFeature extends ListenerAdapter implements Feature {
                     .queue(null, err -> {}); // DMs closed
             channel.delete().reason("Ticket closed").queueAfter(5, TimeUnit.SECONDS, null, err -> {});
         });
+    }
+
+    // ==================================================================== auto-close
+
+    private static final long WARN_AFTER = 24 * 3600;   // warn after 24h of silence
+    private static final long CLOSE_AFTER = 36 * 3600;  // close after 36h of silence
+    private final java.util.concurrent.ScheduledExecutorService timer =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+
+    /** Any message from a person in a ticket counts as activity and cancels a pending warning. */
+    @Override
+    public void onMessageReceived(MessageReceivedEvent event) {
+        if (!event.isFromGuild() || event.getAuthor().isBot()) return;
+        bot.db.update("UPDATE tickets SET last_activity = ?, warned = 0 WHERE channel_id = ? AND closed = 0",
+                Util.nowSec(), event.getChannel().getIdLong());
+    }
+
+    /** Checks open tickets every 5 minutes: warns at 24h without messages, closes at 36h. */
+    public void startTimers() {
+        timer.scheduleAtFixedRate(() -> {
+            long now = Util.nowSec();
+            for (Map<String, Object> row : bot.db.all("SELECT * FROM tickets WHERE closed = 0")) {
+                try {
+                    long last = Database.num(row, "last_activity");
+                    if (last == 0) last = Database.num(row, "opened_at");
+                    long idle = now - last;
+                    TextChannel channel = bot.jda.getTextChannelById(Database.num(row, "channel_id"));
+                    if (channel == null) {   // channel deleted by hand
+                        bot.db.update("UPDATE tickets SET closed = 1, closed_at = ? WHERE channel_id = ?",
+                                now, Database.num(row, "channel_id"));
+                        continue;
+                    }
+                    if (idle >= CLOSE_AFTER) {
+                        bot.db.update("UPDATE tickets SET closed = 1, closed_at = ? WHERE channel_id = ?", now, channel.getIdLong());
+                        channel.sendMessageEmbeds(Messages.embed(bot, "Ticket Closing",
+                                "This ticket had no messages for 36 hours, so it's being closed.\n"
+                                + "It will be deleted in 5 seconds.")).complete();
+                        finishClose(channel, row, "Auto-close (36h inactive)");
+                    } else if (idle >= WARN_AFTER && Database.num(row, "warned") == 0) {
+                        bot.db.update("UPDATE tickets SET warned = 1 WHERE channel_id = ?", channel.getIdLong());
+                        long closesAt = last + CLOSE_AFTER;
+                        channel.sendMessage("<@" + Database.num(row, "user_id") + ">")
+                                .setEmbeds(Messages.embed(bot, "Inactive Ticket",
+                                        "This ticket hasn't had a message in 24 hours.\n"
+                                        + "It will close automatically " + Util.ts(closesAt, 'R') + " unless someone replies."))
+                                .complete();
+                    }
+                } catch (Exception e) {
+                    org.slf4j.LoggerFactory.getLogger(SupportFeature.class).warn("Auto-close check failed", e);
+                }
+            }
+        }, 1, 5, java.util.concurrent.TimeUnit.MINUTES);
     }
 
     /** Claim + Close buttons under a ticket's opening message. */

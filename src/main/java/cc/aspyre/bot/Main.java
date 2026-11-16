@@ -59,6 +59,7 @@ public class Main {
 
         news.startTimers();
         moderation.startTimers();
+        support.startTimers();
         info.startPresence();
         info.postChangelog();
         if (cfg.syncApi.enabled) {
