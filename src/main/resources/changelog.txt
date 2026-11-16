@@ -1,8 +1,9 @@
-version: 1.5
-- Changelog posts now include ideas for the next update
+version: 1.6
+- Added `/ticket stats`: shows how many tickets each staff member has claimed and closed
+- `/ticket stats` can show a single staff member (`member:`) or only the last N days (`days:`)
+- Tickets now remember who closed them and when, so stats stay accurate
 + Ticket ratings: after a ticket closes, the member rates their support from 1–5 stars
 + Auto-close inactive tickets after 48 hours with no messages, with a warning first
-+ Staff ticket stats: `/ticket stats` shows how many tickets each staff member has claimed and closed
 + Message logs: post deleted and edited messages to a staff log channel
 + Live member count: a locked voice channel that shows the server's member count
 + In-game punishment sync: bans and mutes on the Minecraft server show up in a Discord log channel

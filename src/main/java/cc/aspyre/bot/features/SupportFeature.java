@@ -60,7 +60,7 @@ public class SupportFeature extends ListenerAdapter implements Feature {
     public SupportFeature(Bot bot) {
         this.bot = bot;
         // Columns added for ticket claiming (older databases won't have them yet).
-        for (String col : List.of("claimed_by INTEGER", "message_id INTEGER")) {
+        for (String col : List.of("claimed_by INTEGER", "message_id INTEGER", "closed_by INTEGER", "closed_at INTEGER")) {
             try {
                 bot.db.update("ALTER TABLE tickets ADD COLUMN " + col);
             } catch (RuntimeException alreadyThere) {
@@ -81,6 +81,9 @@ public class SupportFeature extends ListenerAdapter implements Feature {
                         new SubcommandData("close", "Close this ticket"),
                         new SubcommandData("claim", "Staff: claim this ticket"),
                         new SubcommandData("unclaim", "Staff: give up your claim on this ticket"),
+                        new SubcommandData("stats", "Staff: how many tickets each staff member has claimed and closed")
+                                .addOption(OptionType.USER, "member", "Only show this staff member")
+                                .addOption(OptionType.INTEGER, "days", "Only count the last N days (default: all time)"),
                         new SubcommandData("add", "Staff: add someone to this ticket")
                                 .addOption(OptionType.USER, "member", "Who to add", true),
                         new SubcommandData("remove", "Staff: remove someone from this ticket")
@@ -106,6 +109,7 @@ public class SupportFeature extends ListenerAdapter implements Feature {
                     case "close" -> closeTicket(event);
                     case "claim" -> claimTicket(event);
                     case "unclaim" -> unclaimTicket(event);
+                    case "stats" -> ticketStats(event);
                     case "add" -> ticketAdd(event);
                     case "remove" -> ticketRemove(event);
                     default -> { }
@@ -200,7 +204,8 @@ public class SupportFeature extends ListenerAdapter implements Feature {
             event.reply("Only the ticket owner or staff can close this.").setEphemeral(true).queue();
             return;
         }
-        bot.db.update("UPDATE tickets SET closed = 1 WHERE channel_id = ?", channel.getIdLong());
+        bot.db.update("UPDATE tickets SET closed = 1, closed_by = ?, closed_at = ? WHERE channel_id = ?",
+                event.getUser().getIdLong(), Util.nowSec(), channel.getIdLong());
         event.replyEmbeds(Messages.embed(bot, "Ticket Closing", "This ticket will be deleted in 5 seconds.")).queue();
         long claimedBy = Database.num(row, "claimed_by");
 
@@ -313,6 +318,52 @@ public class SupportFeature extends ListenerAdapter implements Feature {
         refreshOpening(channel, row, 0);
         event.replyEmbeds(Messages.embed(bot, "Ticket Unclaimed",
                 "This ticket is open for any staff member to claim again.")).queue();
+    }
+
+    private void ticketStats(SlashCommandInteractionEvent event) {
+        if (!bot.requireStaff(event)) return;
+        Member only = event.getOption("member", OptionMapping::getAsMember);
+        int days = event.getOption("days", 0, OptionMapping::getAsInt);
+        long since = days > 0 ? Util.nowSec() - days * 86400L : 0;
+
+        // staff id -> {claimed, closed}
+        Map<Long, long[]> counts = new HashMap<>();
+        for (Map<String, Object> r : bot.db.all(
+                "SELECT claimed_by AS id, COUNT(*) AS n FROM tickets WHERE claimed_by IS NOT NULL AND opened_at >= ? GROUP BY claimed_by", since)) {
+            counts.computeIfAbsent(Database.num(r, "id"), k -> new long[2])[0] = Database.num(r, "n");
+        }
+        for (Map<String, Object> r : bot.db.all(
+                "SELECT closed_by AS id, COUNT(*) AS n FROM tickets WHERE closed_by IS NOT NULL AND closed_at >= ? GROUP BY closed_by", since)) {
+            counts.computeIfAbsent(Database.num(r, "id"), k -> new long[2])[1] = Database.num(r, "n");
+        }
+        // Only staff count (a member closing their own ticket isn't a staff close).
+        Guild guild = event.getGuild();
+        counts.keySet().removeIf(id -> {
+            Member m = guild.getMemberById(id);
+            return m == null ? true : !bot.isStaff(m);
+        });
+        if (only != null) counts.keySet().removeIf(id -> id != only.getIdLong());
+
+        List<Map.Entry<Long, long[]>> rows = new ArrayList<>(counts.entrySet());
+        rows.sort((a, b) -> Long.compare(b.getValue()[0] + b.getValue()[1], a.getValue()[0] + a.getValue()[1]));
+
+        StringBuilder sb = new StringBuilder();
+        int rank = 1;
+        for (var e : rows.subList(0, Math.min(15, rows.size()))) {
+            sb.append("**#").append(rank++).append("** <@").append(e.getKey()).append(">  ")
+              .append(e.getValue()[0]).append(" claimed • ").append(e.getValue()[1]).append(" closed\n");
+        }
+        if (rows.isEmpty()) sb.append("No claimed or closed tickets yet.");
+
+        long open = Database.num(bot.db.one("SELECT COUNT(*) AS n FROM tickets WHERE closed = 0"), "n");
+        long unclaimed = Database.num(bot.db.one("SELECT COUNT(*) AS n FROM tickets WHERE closed = 0 AND claimed_by IS NULL"), "n");
+        long closed = Database.num(bot.db.one("SELECT COUNT(*) AS n FROM tickets WHERE closed = 1 AND COALESCE(closed_at, 0) >= ?", since), "n");
+
+        event.replyEmbeds(Messages.base(bot, "Ticket Stats", sb.toString())
+                .addField("Period", days > 0 ? "Last " + days + (days == 1 ? " day" : " days") : "All time", true)
+                .addField("Open now", open + " (" + unclaimed + " unclaimed)", true)
+                .addField("Closed", String.valueOf(closed), true)
+                .build()).setEphemeral(true).queue();
     }
 
     private void ticketAdd(SlashCommandInteractionEvent event) {
