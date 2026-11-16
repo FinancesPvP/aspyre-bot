@@ -1,0 +1,3 @@
+version: 1.4
+- Removed the `/welcome-preview` test command
+- The bot now posts a changelog in this channel after every update

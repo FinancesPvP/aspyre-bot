@@ -10,9 +10,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateBoostTimeEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
-import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -32,13 +30,32 @@ public class InfoFeature extends ListenerAdapter implements Feature {
 
     @Override
     public List<CommandData> commands() {
-        return List.of(Commands.slash("welcome-preview", "Staff: see the welcome message (only you can see it)"));
+        return List.of();
     }
 
-    @Override
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        if (!event.getName().equals("welcome-preview") || !bot.requireStaff(event)) return;
-        event.reply(Messages.welcome(bot, event.getMember())).setEphemeral(true).queue();
+    /**
+     * Posts the changelog bundled in this jar (resources/changelog.txt) to the changelog channel,
+     * once per version. Runs at startup, so every deploy announces what changed.
+     */
+    public void postChangelog() {
+        try (var in = InfoFeature.class.getResourceAsStream("/changelog.txt")) {
+            if (in == null) return;
+            List<String> lines = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).lines().toList();
+            String version = lines.stream().filter(l -> l.startsWith("version:")).map(l -> l.substring(8).trim())
+                    .findFirst().orElse(null);
+            if (version == null || version.equals(bot.db.get("changelog:posted"))) return;
+
+            StringBuilder changes = new StringBuilder();
+            for (String l : lines) {
+                if (l.startsWith("- ")) changes.append("**•** ").append(l.substring(2).trim()).append('\n');
+            }
+            GuildMessageChannel ch = bot.channel("changelog");
+            if (ch == null || changes.length() == 0) return;
+            ch.sendMessageEmbeds(Messages.base(bot, "Update " + version, changes.toString()).build()).complete();
+            bot.db.set("changelog:posted", version);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(InfoFeature.class).warn("Couldn't post changelog", e);
+        }
     }
 
     @Override

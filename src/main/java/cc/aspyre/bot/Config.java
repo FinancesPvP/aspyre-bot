@@ -47,8 +47,12 @@ public class Config {
         public String secret = "";
     }
 
+    /** Channels with a built-in default, so they work even if config.json doesn't list them. */
+    private static final Map<String, Long> DEFAULT_CHANNELS = Map.of("changelog", 1571728111131951114L);
+
     public long channel(String key) {
-        return channels.getOrDefault(key, 0L);
+        Long id = channels.get(key);
+        return id != null && id != 0 ? id : DEFAULT_CHANNELS.getOrDefault(key, 0L);
     }
 
     public long role(String key) {

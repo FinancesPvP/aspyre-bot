@@ -60,6 +60,7 @@ public class Main {
         news.startTimers();
         moderation.startTimers();
         info.startPresence();
+        info.postChangelog();
         if (cfg.syncApi.enabled) {
             new SyncApi(bot, sync, news).start();
         }
