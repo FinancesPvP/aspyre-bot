@@ -1,6 +1,5 @@
-version: 1.12
-- Panels now use a new banner with the Para logo
-- All embeds are now ParaPvP blue (#4CADD0) instead of orange
+version: 1.13
+- Cleaner panel banner: smooth dark-blue background with a soft glow behind the Para logo
 + Mod log channel: every ban, kick, timeout and purge logged
 + Message logs: deleted and edited messages go to a staff channel
 + /purge, /slowmode, /timeout and /kick
