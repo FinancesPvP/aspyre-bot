@@ -125,9 +125,9 @@ public final class Messages {
     public static MessageEmbed gameRules(Bot bot) {
         Config c = bot.cfg;
         String[] r = {
-                "No hacked clients, X-ray, auto-clickers, macros or anything over " + c.maxCps + " CPS.",
+                "No hacked clients or X-ray.",
+                "No auto-clicking or macros of any kind.",
                 "Do not abuse bugs or dupes. Report them in a ticket.",
-                "Do not go over the faction limit (" + c.factionSize + " members, " + c.allyLimit + " allies) or team past it.",
                 "Do not evade bans or punishments on alts.",
                 "Do not build lag machines.",
                 "Do not trade items, accounts or factions for real money.",
