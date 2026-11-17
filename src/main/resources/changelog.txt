@@ -1,6 +1,7 @@
-version: 1.14
-- In-game rules: auto-clicking and macros are now banned outright (no CPS limit)
-- Removed the faction limit rule, since the server already enforces it
+version: 1.15
+- The sync channel now stays clean: any message typed there is deleted instantly
+- Sync results and "wrong format" help are sent to you in DMs instead of the channel
+- If your DMs are closed, a 3-second note tells you to use the Sync button instead
 + Mod log channel: every ban, kick, timeout and purge logged
 + Message logs: deleted and edited messages go to a staff channel
 + /purge, /slowmode, /timeout and /kick

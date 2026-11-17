@@ -1,6 +1,7 @@
 package cc.aspyre.bot.features;
 
 import cc.aspyre.bot.Bot;
+import cc.aspyre.bot.Messages;
 import cc.aspyre.bot.Database;
 import cc.aspyre.bot.Util;
 import net.dv8tion.jda.api.entities.Guild;
@@ -77,26 +78,35 @@ public class SyncFeature extends ListenerAdapter implements Feature {
         if (!event.isFromGuild() || event.getAuthor().isBot()) return;
         if (event.getChannel().getIdLong() != bot.cfg.channel("sync")) return;
 
+        // Remove the message right away so the channel only ever shows the sync panel.
         event.getMessage().delete().queue(null, err -> {});
-        String mention = event.getAuthor().getAsMention();
         String raw = event.getMessage().getContentRaw().trim();
 
         if (!raw.toLowerCase().startsWith("!sync ")) {
-            temporary(event, "Usage: `!sync <code>` " + mention);
+            privately(event, "Sync", "That message was removed from the sync channel.\n"
+                    + "To link your account, press the **Sync** button on the panel, or type `!sync <code>` "
+                    + "using the 6-digit code from `/sync` in-game.");
             return;
         }
         if (!performing.add(event.getAuthor().getIdLong())) return;
         try {
-            String result = link(event.getMember(), raw.substring(6).trim());
-            temporary(event, result + " " + mention);
+            privately(event, "Sync", link(event.getMember(), raw.substring(6).trim()));
         } finally {
             performing.remove(event.getAuthor().getIdLong());
         }
     }
 
-    private static void temporary(MessageReceivedEvent event, String text) {
-        event.getChannel().sendMessage(text)
-                .queue(m -> m.delete().queueAfter(5, TimeUnit.SECONDS, null, err -> {}));
+    /**
+     * Replies to the member in DMs so nothing is posted in the sync channel. If their DMs are closed,
+     * a short notice (with no details) shows for 3 seconds telling them to use the Sync button instead.
+     */
+    private void privately(MessageReceivedEvent event, String title, String text) {
+        event.getAuthor().openPrivateChannel()
+                .flatMap(dm -> dm.sendMessageEmbeds(Messages.embed(bot, title, text)))
+                .queue(null, err -> event.getChannel()
+                        .sendMessage(event.getAuthor().getAsMention()
+                                + " your DMs are closed. Use the **Sync** button on the panel instead.")
+                        .queue(m -> m.delete().queueAfter(3, TimeUnit.SECONDS, null, e -> {})));
     }
 
     @Override
