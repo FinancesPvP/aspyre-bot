@@ -25,7 +25,7 @@ public class Config {
     public int allyLimit = 0;
     public int maxStrikes = 3;
     public String boosterPerk = "";
-    public String embedColor = "#F0601E";
+    public String embedColor = "#4CADD0";
     public String twitterLink = "";
     /** Name of the server's custom emoji used at the end of the welcome message. */
     public String welcomeEmoji = "parapvp";
